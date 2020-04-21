@@ -1,12 +1,14 @@
 import java.util.Collections;
 import java.util.Properties;
 
+import epl.samosa.SamosaConsumer;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.serialization.*;
 
 public class SimpleConsumer {
 
-    private static Consumer<Long, String> createConsumer(final String bootstrapServers, final String topic) {
+    private static SamosaConsumer<Long, String> createConsumer(final String bootstrapServers) {
         final Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
                 bootstrapServers);
@@ -17,27 +19,23 @@ public class SimpleConsumer {
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
                 StringDeserializer.class.getName());
 
-        // Create the consumer using props.
-        final Consumer<Long, String> consumer =
-                new KafkaConsumer<>(props);
-
-        // Subscribe to the topic.
-        consumer.subscribe(Collections.singletonList(topic));
-
-        return consumer;
+        return new SamosaConsumer<>(props);
     }
 
     public static void main(String[] args) {
-        String topic = "my-example-topic";
         String bootstrapServers =
                 "localhost:9092,localhost:9093,localhost:9094";
-        Consumer<Long, String> smolConsumer = createConsumer(bootstrapServers, topic);
+        SamosaConsumer<Long, String> samosaConsumer = createConsumer(bootstrapServers);
 
         final int giveUp = 100;   int noRecordsCount = 0;
 
+        MutablePair<Double, Double> coordinate = new MutablePair<>(33.781538, -84.401653);
+        //Double increment = 0.000200;
+        samosaConsumer.subscribe(coordinate);
+
         while (true) {
             final ConsumerRecords<Long, String> consumerRecords =
-                    smolConsumer.poll(1000);
+                    samosaConsumer.pollLatest(coordinate, (long) 1000);
 
             if (consumerRecords.count()==0) {
                 noRecordsCount++;
@@ -45,15 +43,15 @@ public class SimpleConsumer {
                 else continue;
             }
 
-            consumerRecords.forEach(record -> {
+            consumerRecords.forEach(record ->
                 System.out.printf("Consumer Record:(%d, %s, %d, %d)\n",
                         record.key(), record.value(),
-                        record.partition(), record.offset());
-            });
+                        record.partition(), record.offset())
+            );
 
-            smolConsumer.commitAsync();
+            samosaConsumer.commitAsync();
         }
-        smolConsumer.close();
+        samosaConsumer.close();
 
     }
 }

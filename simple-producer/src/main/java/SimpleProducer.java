@@ -1,11 +1,18 @@
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
+import epl.samosa.SamosaProducer;
+import epl.samosa.SamosaProducerRecord;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.*;
 
 
 public class SimpleProducer {
-    private static Producer<Long, String> createProducer(final String bootstrapServers) {
+    private static SamosaProducer<Long, String> createProducer(final String bootstrapServers) {
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
                 bootstrapServers);
@@ -15,7 +22,7 @@ public class SimpleProducer {
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 StringSerializer.class.getName());
 
-        return new KafkaProducer<>(props);
+        return new SamosaProducer<>(props);
     }
     
     public static void main(String[] args) {
@@ -26,30 +33,42 @@ public class SimpleProducer {
                 "localhost:9092,localhost:9093,localhost:9094";
 
         //specify region bounds
-        String topic = "my-example-topic"; // <--- this is dynamic for samosa
-        Producer<Long, String> producer = createProducer(bootstrapServers);
+        SamosaProducer<Long, String> producer = createProducer(bootstrapServers);
         int sendMessageCount = 5;
         long time = System.currentTimeMillis();
+        MutablePair<Double, Double> coordinate = new MutablePair<>(33.781538, -84.401653);
+        //Double increment = 0.000200;
         try {
             for (long index = time; index < time + sendMessageCount; index++) {
-                final ProducerRecord<Long, String> record =
-                        new ProducerRecord<>(topic, index,
-                                "Hello smoll Consumer! " + index);
+                final SamosaProducerRecord<Long, String> record =
+                        new SamosaProducerRecord<>(coordinate, index,
+                                "Hello Samosa!");
 
-                RecordMetadata metadata = producer.send(record).get();
+                List<Future<RecordMetadata>> futureList = producer.send(record);
+                List<RecordMetadata> metadataList = new ArrayList<>();
+                futureList.forEach(future -> {
+                    try {
+                        metadataList.add(future.get());
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                });
 
-                long elapsedTime = System.currentTimeMillis() - time;
-                System.out.printf("sent record(key=%s value=%s) " +
-                                "meta(partition=%d, offset=%d) time=%d\n",
-                        record.key(), record.value(), metadata.partition(),
-                        metadata.offset(), elapsedTime);
+                metadataList.forEach(metadata -> {
+
+                    long elapsedTime = System.currentTimeMillis() - time;
+                    System.out.printf("sent record(key=%s value=%s) " +
+                                    "meta(partition=%d, offset=%d) time=%d\n",
+                            record.key(), record.value(), metadata.partition(),
+                            metadata.offset(), elapsedTime);
+                });
 
             }
-        } catch (Exception exception) {
+        }
+        catch (Exception exception) {
             exception.printStackTrace();
         }
         finally {
-            producer.flush();
             producer.close();
         }
     }

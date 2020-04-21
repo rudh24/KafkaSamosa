@@ -12,7 +12,7 @@ import java.util.concurrent.Future;
 
 public class SamosaProducer<K, V> {
     static GeoHashIndex<String> geoHashIndex;
-    Map<String, Pair<Double, Double>> staticTopicCoordinateMap;
+    StaticTopics staticTopics;
     final Producer<K, V> producer;
 
     public List<Future<RecordMetadata>> send(SamosaProducerRecord<K, V> record) {
@@ -29,20 +29,21 @@ public class SamosaProducer<K, V> {
 
     public SamosaProducer (Properties properties) {
 
-        staticTopicCoordinateMap = new HashMap<>();
-        staticTopicCoordinateMap.put("Howey", new MutablePair<>(33.778185, -84.399164));
-        staticTopicCoordinateMap.put("Dodd", new MutablePair<>(33.771247, -84.392137));
-        staticTopicCoordinateMap.put("Coda", new MutablePair<>(33.775144, -84.387341));
-        staticTopicCoordinateMap.put("Crc", new MutablePair<> (3.779674, -84.407479));
+        staticTopics = new StaticTopics();
 
         Properties geoHashIndexProps = new Properties();
         geoHashIndexProps.put("maxCharPrecision", 8);
         geoHashIndex = new GeoHashIndex<>(geoHashIndexProps);
-        staticTopicCoordinateMap.forEach((topic, coordinate) ->
+        staticTopics.coordinateMap.forEach((topic, coordinate) ->
             geoHashIndex.addIndex(coordinate.getKey(), coordinate.getRight(), topic)
         );
 
         producer = new KafkaProducer<>(properties);
+    }
+
+    public void close() {
+        producer.flush();
+        producer.close();
     }
 
 }

@@ -7,14 +7,29 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 
 import java.util.*;
 
+import org.apache.log4j.Logger;
+
+
 public class SamosaConsumer<K, V> {
+    final static Logger logger = Logger.getLogger(SamosaConsumer.class);
+
     static GeoHashIndex<String> geoHashIndex;
-    Map<String, Pair<Double, Double>> staticTopicCoordinateMap;
-    // Create the consumer using props.
-    final Consumer<K, V> consumer;
+    StaticTopics staticTopics;
     List<String> currentTopics;
 
+    // Create the consumer using props.
+    final Consumer<K, V> consumer;
+
     public SamosaConsumer(Properties props) {
+
+        Properties geoHashIndexProps = new Properties();
+        staticTopics = new StaticTopics();
+        geoHashIndexProps.put("maxCharPrecision", 8);
+
+        geoHashIndex = new GeoHashIndex<>(geoHashIndexProps);
+        staticTopics.coordinateMap.forEach((topic, coordinate) ->
+                geoHashIndex.addIndex(coordinate.getKey(), coordinate.getRight(), topic)
+        );
 
         // Create the consumer using props.
         consumer = new KafkaConsumer<>(props);
@@ -51,5 +66,13 @@ public class SamosaConsumer<K, V> {
         currentTopics = topics;
         consumer.subscribe(currentTopics);
         return consumer.poll(timeout);
+    }
+
+    public void close() {
+        consumer.close();
+    }
+
+    public void commitAsync() {
+       consumer.commitAsync();
     }
 }
