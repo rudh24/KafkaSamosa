@@ -6,10 +6,13 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="simple-consumer" />
         <module name="samosa" />
-        <module name="simple-producer" />
+        <module name="samosa-taster" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="simple-consumer" target="1.8" />
+      <module name="simple-producer" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
 </project>

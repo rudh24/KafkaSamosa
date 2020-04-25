@@ -9,9 +9,8 @@
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
     <modules>
-        <module>simple-consumer</module>
-        <module>simple-producer</module>
         <module>samosa</module>
+        <module>samosa-taster</module>
     </modules>
 
     <dependencies>
